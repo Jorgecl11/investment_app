@@ -15,3 +15,8 @@ print(stock.shape)
 print(stock.head())
 
 stock.columns = stock.columns.get_level_values(0)
+
+stock["return_5d"] = stock["Close"].pct_change(5)
+stock["return_20d"] = stock["Close"].pct_change(20)
+stock["return_50d"] = stock["Close"].pct_change(50)
+print(stock[["return_5d", "return_20d", "return_50d"]].head(25))
