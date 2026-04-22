@@ -44,3 +44,15 @@ print(f"Rows where price went DOWN in 30 days: {down} ({down/total*100:.1f}%)")
 print(f"\nSample of target labels:")
 print(stock[["Close", "target"]].head(30))
 
+
+features = ["return_5d", "return_20d", "return_50d",
+"price_vs_ma20", "price_vs_ma50",
+"volatility_20d"]
+
+# Feature matrix: selected stock indicators returns, moving averages, volatility
+x = stock[features]
+
+# Target variable:
+# 1 = price increased after 30 days (buy signal)
+# 0 = price did not increase after 30 days (no-buy signal)
+y = stock["target"]
