@@ -43,3 +43,4 @@ print(f"Rows where price went UP in 30 days: {up} ({up/total*100:.1f}%)")
 print(f"Rows where price went DOWN in 30 days: {down} ({down/total*100:.1f}%)")
 print(f"\nSample of target labels:")
 print(stock[["Close", "target"]].head(30))
+
