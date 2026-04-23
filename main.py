@@ -2,6 +2,7 @@
 import yfinance as yf
 import pandas as pd
 from datetime import date, timedelta
+from sklearn.ensemble import RandomForestClassifier
 
 ticker = "NVDA"
 today = date.today()
@@ -50,9 +51,28 @@ features = ["return_5d", "return_20d", "return_50d",
 "volatility_20d"]
 
 # Feature matrix: selected stock indicators returns, moving averages, volatility
-x = stock[features]
+X = stock[features]
 
 # Target variable:
 # 1 = price increased after 30 days (buy signal)
 # 0 = price did not increase after 30 days (no-buy signal)
 y = stock["target"]
+
+#Stage 3: Training the model.
+
+# split by date - use old data to train and recent data to test.
+split = int(len(X) * 0.8)
+
+X_train = X.iloc[:split]
+X_test = X.iloc[split:]
+y_train = y.iloc[:split]
+y_test = y.iloc[split:]
+
+print(f"\nTraining on {len(X_train)} days of data")
+print(f"Testing on {len(X_test)} days of data")
+
+#training the model.
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+print("\nModel trained Succesfully!")
