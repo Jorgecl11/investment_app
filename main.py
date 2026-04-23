@@ -107,3 +107,34 @@ accuracy = accuracy_score(y_test, predictions)
 print(f"\nModel Accuracy: {accuracy*100:.1f}%")
 print(f"\nDetailed Report:")
 print(classification_report(y_test, predictions, target_names=["Dont Buy", "Buy"]))
+
+
+# Stage 5 - make a prediction
+
+# grab todays signals 
+latest = stock[features].tail(1)
+
+# ask the model to predict.
+prediction = model.predict(latest)[0]
+confidence = model.predict_proba(latest)[0]
+
+# get current price
+current_price = stock["Close"].iloc[-1]
+
+# display the result
+print("\n" + "="*40)
+print(f"  {ticker.upper()} Investment Signal")
+print("="*40)
+print(f"  Current Price:  ${current_price:.2f}")
+print(f"  RSI:            {stock['rsi'].iloc[-1]:.1f}")
+print(f"  5 Day Return:   {stock['return_5d'].iloc[-1]*100:.1f}%")
+print(f"  Volatility:     {stock['volatility_20d'].iloc[-1]:.1f}")
+print()
+if prediction == 1:
+    print(f"  Signal:         BUY 📈")
+else:
+    print(f"  Signal:         DONT BUY 📉")
+print(f"  Confidence:     {max(confidence)*100:.1f}%")
+print("="*40)
+print("  ⚠️  Not financial advice")
+print("="*40)
