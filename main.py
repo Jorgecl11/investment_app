@@ -10,7 +10,7 @@ import pandas_ta as ta
 ticker = "NVDA"
 today = date.today()
 yesterday = today - timedelta(days=1)
-stock = yf.download(ticker, start="2022-01-01", end=yesterday.strftime("%Y-%m-%d"))
+stock = yf.download(ticker, start="2022-01-01")
 stock.columns = stock.columns.get_level_values(0)
 
 # returns how much price has changed over n days.
@@ -40,7 +40,7 @@ stock["macd_signal"] = macd["MACDs_12_26_9"]
 # Volume signal - is the price move backed by real Volume
 stock["volume_signal"] = stock["Volume"] / stock["Volume"].rolling(20).mean()
 
-spy = yf.download("SPY", start="2022-01-01", end=yesterday.strftime("%Y-%m-%d"))
+spy = yf.download("SPY", start="2022-01-01")
 spy.columns = spy.columns.get_level_values(0)
 spy_return = spy["Close"].pct_change(5)
 spy_return.name = "spy_return_5d"
@@ -138,3 +138,5 @@ print(f"  Confidence:     {max(confidence)*100:.1f}%")
 print("="*40)
 print("  ⚠️  Not financial advice")
 print("="*40)
+
+print(f"Most recent data: {stock.index[-1].date()}")
