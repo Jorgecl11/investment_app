@@ -1,142 +1,33 @@
-#yfinance library that talks to yahoo finance api and downloads stock data
-import yfinance as yf
-import pandas as pd
-from datetime import date, timedelta
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
-import pandas_ta as ta
+from data import get_stock_data
+from features import add_features, features
+from model import train_model, predict
 
+while True:
+    ticker = input("\nEnter stock ticker (e.g. NVDA, AAPL, TSLA) or 'quit' to exit: ").upper()
 
-ticker = "NVDA"
-today = date.today()
-yesterday = today - timedelta(days=1)
-stock = yf.download(ticker, start="2022-01-01")
-stock.columns = stock.columns.get_level_values(0)
+    if ticker == "QUIT":
+        print("Goodbye!")
+        break
 
-# returns how much price has changed over n days.
-stock["return_5d"] = stock["Close"].pct_change(5)
-stock["return_20d"] = stock["Close"].pct_change(20)
-stock["return_50d"] = stock["Close"].pct_change(50)
+    try:
+        print(f"\nFetching data for {ticker}...")
+        stock_raw, spy = get_stock_data(ticker)
 
-# calculate the average closing price over the last 20 and 50 trading days
-stock["ma_20"] = stock["Close"].rolling(20).mean()
-stock["ma_50"] = stock["Close"].rolling(50).mean()
+        stock_live = add_features(stock_raw, spy, drop_target_rows=False)
+        latest_features = stock_live[features].tail(1)
 
-# closing price divided by 20 and 50 day average
-stock["price_vs_ma20"] = stock["Close"] / stock["ma_20"]
-stock["price_vs_ma50"] = stock["Close"] / stock["ma_50"]
+        stock_clean = add_features(stock_raw, spy, drop_target_rows=True)
 
-# calculates how wildly the price has been swinging over the last 20 days.
-stock["volatility_20d"] = stock["Close"].rolling(20).std()
+        print(f"Training model on {ticker} data...")
+        model = train_model(stock_clean, features)
 
-# RSI - measures if stock is overbought (>70) or oversold (<30)
-stock["rsi"]= ta.rsi(stock["Close"], length=14)
+        prediction, confidence = predict(
+            model, latest_features, stock_live, ticker
+        )
 
-# MACD - measures momentum shifts
-macd = ta.macd(stock["Close"])
-stock["macd"] = macd["MACD_12_26_9"]
-stock["macd_signal"] = macd["MACDs_12_26_9"]
-
-# Volume signal - is the price move backed by real Volume
-stock["volume_signal"] = stock["Volume"] / stock["Volume"].rolling(20).mean()
-
-spy = yf.download("SPY", start="2022-01-01")
-spy.columns = spy.columns.get_level_values(0)
-spy_return = spy["Close"].pct_change(5)
-spy_return.name = "spy_return_5d"
-stock = stock.join(spy_return)
-
-# looks into the price 30 days in the future if its higher than 
-# 1 = yes (good time to buy), 0 = no (dont buy!).
-stock["target"] = (stock["Close"].shift(-30) > stock["Close"]).astype(int)
-
-
-# drop the rows that we cant calculate features or target.
-stock.dropna(inplace=True)
-
-total =len(stock)
-up = stock["target"].sum()
-down = (stock["target"] == 0).sum()
-
-# previews features.
-print(f"Stock: {ticker.upper()}")
-print(f"Clean dataset shape: {stock.shape}")
-print(f"Rows where price went UP in 30 days: {up} ({up/total*100:.1f}%)")
-print(f"Rows where price went DOWN in 30 days: {down} ({down/total*100:.1f}%)")
-print(f"\nSample of target labels:")
-print(stock[["Close", "target"]].head(30))
-
-features = ["return_5d", "return_20d", "return_50d",
-            "price_vs_ma20", "price_vs_ma50",
-            "volatility_20d", "rsi", "macd_signal"]
-
-# Feature matrix: selected stock indicators returns, moving averages, volatility
-X = stock[features]
-
-# Target variable:
-# 1 = price increased after 30 days (buy signal)
-# 0 = price did not increase after 30 days (no-buy signal)
-y = stock["target"]
-
-#Stage 3: Training the model.
-
-# split by date - use old data to train and recent data to test.
-split = int(len(X) * 0.9)
-
-X_train = X.iloc[:split]
-X_test = X.iloc[split:]
-y_train = y.iloc[:split]
-y_test = y.iloc[split:]
-
-print(f"\nTraining on {len(X_train)} days of data")
-print(f"Testing on {len(X_test)} days of data")
-
-#training the model.
-model = RandomForestClassifier(n_estimators=500, random_state=42, class_weight="balanced")
-model.fit(X_train, y_train)
-
-print("\nModel trained Succesfully!")
-
-#stage 4- Evaluate the model
-
-#use the model to predict on data it has never seen.
-predictions = model.predict(X_test)
-
-# checks overall accuracy
-accuracy = accuracy_score(y_test, predictions)
-print(f"\nModel Accuracy: {accuracy*100:.1f}%")
-print(f"\nDetailed Report:")
-print(classification_report(y_test, predictions, target_names=["Dont Buy", "Buy"]))
-
-
-# Stage 5 - make a prediction
-
-# grab todays signals 
-latest = stock[features].tail(1)
-
-# ask the model to predict.
-prediction = model.predict(latest)[0]
-confidence = model.predict_proba(latest)[0]
-
-# get current price
-current_price = stock["Close"].iloc[-1]
-
-# display the result
-print("\n" + "="*40)
-print(f"  {ticker.upper()} Investment Signal")
-print("="*40)
-print(f"  Current Price:  ${current_price:.2f}")
-print(f"  RSI:            {stock['rsi'].iloc[-1]:.1f}")
-print(f"  5 Day Return:   {stock['return_5d'].iloc[-1]*100:.1f}%")
-print(f"  Volatility:     {stock['volatility_20d'].iloc[-1]:.1f}")
-print()
-if prediction == 1:
-    print(f"  Signal:         BUY 📈")
-else:
-    print(f"  Signal:         DONT BUY 📉")
-print(f"  Confidence:     {max(confidence)*100:.1f}%")
-print("="*40)
-print("  ⚠️  Not financial advice")
-print("="*40)
-
-print(f"Most recent data: {stock.index[-1].date()}")
+    except ValueError as e:
+        print(f"❌ {e}")
+        continue
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        continue
