@@ -126,12 +126,15 @@ def backtest(model, stock, features):
     # compare againts buy and hold.
     buy_hold_return = (test["Close"].iloc[-1] - test["Close"].iloc[0]) / test["Close"].iloc[0] * 100
 
+    median_return = trades_df["return"].median() * 100
+    
     print(f"\n{'='*40}")
     print(f"  Backtest Results")
     print(f"{'='*40}")
     print(f"  Total trades:      {total_trades}")
     print(f"  Win rate:          {win_rate:.1f}%")
     print(f"  Avg return/trade:  {avg_return:.1f}%")
+    print(f"  Median return:     {median_return:.1f}%")
     print(f"  Buy & Hold return: {buy_hold_return:.1f}%")
     print(f"{'='*40}")
 
