@@ -41,42 +41,75 @@ def train_model(stock, features):
     return model
 
 
-def predict(model, latest_features, stock_live, ticker):
+def predict(model, latest_features, stock_live, ticker, fund_score=0):
     """
     Makes a prediction using the most recent trading day's features.
+    Combines model signal with fundamental score.
     """
     prediction = model.predict(latest_features)[0]
     confidence = model.predict_proba(latest_features)[0]
 
     current_price = stock_live["Close"].iloc[-1]
+
+    # warn about penny stocks
+    if current_price < 1.00:
+        print(f"  WARNING: Price below $1.00 - data may be unreliable")
+        
     rsi           = stock_live["rsi"].iloc[-1]
     return_5d     = stock_live["return_5d"].iloc[-1]
     volatility    = stock_live["volatility_20d"].iloc[-1]
     trend         = stock_live["trend_20_50"].iloc[-1]
     alpha         = stock_live["alpha_5d"].iloc[-1]
 
+    # determine base signal from model confidence
+    if confidence[1] >= 0.60:
+        base_signal = "BUY"
+    elif confidence[0] >= 0.60:
+        base_signal = "DONT BUY"
+    else:
+        base_signal = "UNCERTAIN"
+
+    # combine model signal with fundamental score
+    if base_signal == "BUY":
+        if fund_score >= 2:
+            final_signal = "STRONG BUY"
+        elif fund_score <= -1:
+            final_signal = "CAUTION - fundamentals weak"
+        else:
+            final_signal = "BUY"
+    elif base_signal == "DONT BUY":
+        if fund_score >= 2:
+            final_signal = "WATCH - good company, bad timing"
+        elif fund_score <= -2:
+            final_signal = "AVOID"
+        else:
+            final_signal = "DONT BUY"
+    else:
+        if fund_score >= 2:
+            final_signal = "WATCH - good company, uncertain timing"
+        elif fund_score <= -2:
+            final_signal = "AVOID"
+        else:
+            final_signal = "HOLD / UNCERTAIN"
+
+    # display results
     print("\n" + "="*40)
     print(f"  {ticker.upper()} Investment Signal")
     print("="*40)
-    print(f"  Current Price:  ${current_price:.2f}")
-    print(f"  RSI:            {rsi:.1f}")
-    print(f"  5 Day Return:   {return_5d*100:.1f}%")
-    print(f"  Volatility:     {volatility:.1f}")
-    print(f"  Trend:          {'Uptrend' if trend == 1 else 'Downtrend'}")
-    print(f"  vs Market:      {alpha*100:.1f}%")
+    print(f"  Current Price:    ${current_price:.2f}")
+    print(f"  RSI:              {rsi:.1f}")
+    print(f"  5 Day Return:     {return_5d*100:.1f}%")
+    print(f"  Volatility:       {volatility:.1f}")
+    print(f"  Trend:            {'Uptrend' if trend == 1 else 'Downtrend'}")
+    print(f"  vs Market:        {alpha*100:.1f}%")
+    print(f"  Fundamental Score:{fund_score} / 4")
     print()
-
-    if confidence[1] >= 0.60:
-        print(f"  Signal:         BUY")
-    elif confidence[0] >= 0.60:
-        print(f"  Signal:         DONT BUY")
-    else:
-        print(f"  Signal:         HOLD / UNCERTAIN")
-
-    print(f"  Dont Buy Prob:  {confidence[0]*100:.1f}%")
-    print(f"  Buy Prob:       {confidence[1]*100:.1f}%")
+    print(f"  Signal:           {final_signal}")
+    print()
+    print(f"  Dont Buy Prob:    {confidence[0]*100:.1f}%")
+    print(f"  Buy Prob:         {confidence[1]*100:.1f}%")
     print("="*40)
-    print(" Not financial advice")
+    print("  Not financial advice")
     print("="*40)
 
     return prediction, confidence
@@ -127,7 +160,7 @@ def backtest(model, stock, features):
     buy_hold_return = (test["Close"].iloc[-1] - test["Close"].iloc[0]) / test["Close"].iloc[0] * 100
 
     median_return = trades_df["return"].median() * 100
-    
+
     print(f"\n{'='*40}")
     print(f"  Backtest Results")
     print(f"{'='*40}")
@@ -137,7 +170,4 @@ def backtest(model, stock, features):
     print(f"  Median return:     {median_return:.1f}%")
     print(f"  Buy & Hold return: {buy_hold_return:.1f}%")
     print(f"{'='*40}")
-
     return trades_df
-
-    print(f"Total trades: {len(trades)}")

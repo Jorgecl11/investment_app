@@ -1,6 +1,10 @@
+import warnings
+warnings.filterwarnings("ignore", category=ResourceWarning)
+
 from data import get_stock_data
 from features import add_features, features
 from model import train_model, predict, backtest
+from fundamentals import get_fundamentals, score_fundamentals
 
 while True:
     ticker = input("\nEnter stock ticker (e.g. NVDA, AAPL, TSLA) or 'quit' to exit: ").upper()
@@ -31,9 +35,15 @@ while True:
         # run backtest
         backtest(model, stock_clean, features)
 
-        # make live prediction
+        # fetch and score fundamentals BEFORE predict
+        print(f"Fetching fundamentals for {ticker}...")
+        fundamentals = get_fundamentals(ticker)
+        fund_score = score_fundamentals(fundamentals)
+        print(f"Fundamental score: {fund_score} / 4")
+
+        # make live prediction with fundamental score
         prediction, confidence = predict(
-            model, latest_features, stock_live, ticker
+            model, latest_features, stock_live, ticker, fund_score
         )
 
     except ValueError as e:

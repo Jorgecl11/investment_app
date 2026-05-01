@@ -35,12 +35,16 @@ felt like the most interesting problem to tackle.
 - 20 and 50 day moving averages
 - Price vs moving average ratio
 - 20 day volatility
-- RSI — overbought/oversold signal
-- MACD — momentum shifts
-- Volume signal — is the move backed by real volume?
-- SPY market context — is the overall market up or down?
-- Relative strength — is this stock beating the market?
-- Trend direction — is the 20 day MA above the 50 day MA?
+- RSI - overbought/oversold signal
+- MACD - momentum shifts
+- Volume signal - is the move backed by real volume?
+- SPY market context - is the overall market up or down?
+- Relative strength - is this stock beating the market?
+- Trend direction - is the 20 day MA above the 50 day MA?
+- Profit margin - is the company making money?
+- Revenue growth - is the business growing?
+- Free cashflow - is the company generating cash?
+- Current ratio - can they pay short term debt?
 
 ## Architecture
 The codebase is split into 4 modules:
