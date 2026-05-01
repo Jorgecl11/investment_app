@@ -35,7 +35,7 @@ while True:
         # run backtest
         backtest(model, stock_clean, features)
 
-        # fetch and score fundamentals BEFORE predict
+        # fetch and score fundamentals
         print(f"Fetching fundamentals for {ticker}...")
         fundamentals = get_fundamentals(ticker)
         fund_score = score_fundamentals(fundamentals)
@@ -43,7 +43,7 @@ while True:
 
         # make live prediction with fundamental score
         prediction, confidence = predict(
-            model, latest_features, stock_live, ticker, fund_score
+            model, latest_features, stock_live, ticker, fund_score, fundamentals
         )
 
     except ValueError as e:
