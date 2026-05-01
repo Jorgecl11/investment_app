@@ -62,21 +62,79 @@ def predict(model, latest_features, stock_live, ticker):
     print(f"  RSI:            {rsi:.1f}")
     print(f"  5 Day Return:   {return_5d*100:.1f}%")
     print(f"  Volatility:     {volatility:.1f}")
-    print(f"  Trend:          {'Uptrend 📈' if trend == 1 else 'Downtrend 📉'}")
+    print(f"  Trend:          {'Uptrend' if trend == 1 else 'Downtrend'}")
     print(f"  vs Market:      {alpha*100:.1f}%")
     print()
 
     if confidence[1] >= 0.60:
-        print(f"  Signal:         BUY 📈")
+        print(f"  Signal:         BUY")
     elif confidence[0] >= 0.60:
-        print(f"  Signal:         DONT BUY 📉")
+        print(f"  Signal:         DONT BUY")
     else:
-        print(f"  Signal:         HOLD / UNCERTAIN ⚠️")
+        print(f"  Signal:         HOLD / UNCERTAIN")
 
     print(f"  Dont Buy Prob:  {confidence[0]*100:.1f}%")
     print(f"  Buy Prob:       {confidence[1]*100:.1f}%")
     print("="*40)
-    print("  ⚠️  Not financial advice")
+    print(" Not financial advice")
     print("="*40)
 
     return prediction, confidence
+
+def backtest(model, stock, features):
+    """
+    Simulate tardes on test data and measure real world performance.
+    Only trades in the last 252 days(data model never trained on).
+    """
+    
+    # get test data: last 252 days
+    test = stock.iloc[-252:]
+
+    # make predictions on all test days.
+    predictions = model.predict(test[features])
+
+    # store results of each trade
+    trades = []
+
+    # loop through each day in test data.
+    for i in range(len(test)-30):
+        if predictions[i] == 1: #tells model to buy
+            entry_price = test["Close"].iloc[i] #price stock bought at.
+            exit_price = test["Close"].iloc[i + 30] #price stock was sold at.
+            trade_return = (exit_price - entry_price) / entry_price # profit %
+
+            trades.append({
+                "date": test.index[i].date(), #tracks date.
+                "entry_price" : entry_price, #price paid for stock.
+                "exit_price" : exit_price, # price stock was sold.
+                "return" : trade_return, # profit or loss %
+                "win" : trade_return > 0 # True if profitable.
+            })
+        
+    # calculate overall stats.
+    if len(trades) == 0:
+        print("No buy signals generated in test period.")
+        return
+
+    import pandas as pd
+    trades_df = pd.DataFrame(trades)
+
+    win_rate =trades_df["win"].mean() * 100
+    avg_return = trades_df["return"].mean() * 100
+    total_trades = len(trades_df)
+
+    # compare againts buy and hold.
+    buy_hold_return = (test["Close"].iloc[-1] - test["Close"].iloc[0]) / test["Close"].iloc[0] * 100
+
+    print(f"\n{'='*40}")
+    print(f"  Backtest Results")
+    print(f"{'='*40}")
+    print(f"  Total trades:      {total_trades}")
+    print(f"  Win rate:          {win_rate:.1f}%")
+    print(f"  Avg return/trade:  {avg_return:.1f}%")
+    print(f"  Buy & Hold return: {buy_hold_return:.1f}%")
+    print(f"{'='*40}")
+
+    return trades_df
+
+    print(f"Total trades: {len(trades)}")
