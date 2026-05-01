@@ -54,7 +54,7 @@ def predict(model, latest_features, stock_live, ticker, fund_score=0):
     # warn about penny stocks
     if current_price < 1.00:
         print(f"  WARNING: Price below $1.00 - data may be unreliable")
-        
+
     rsi           = stock_live["rsi"].iloc[-1]
     return_5d     = stock_live["return_5d"].iloc[-1]
     volatility    = stock_live["volatility_20d"].iloc[-1]
@@ -106,8 +106,8 @@ def predict(model, latest_features, stock_live, ticker, fund_score=0):
     print()
     print(f"  Signal:           {final_signal}")
     print()
-    print(f"  Dont Buy Prob:    {confidence[0]*100:.1f}%")
-    print(f"  Buy Prob:         {confidence[1]*100:.1f}%")
+    print(f"  Technical Dont Buy: {confidence[0]*100:.1f}%")
+    print(f"  Technical Buy:      {confidence[1]*100:.1f}%")
     print("="*40)
     print("  Not financial advice")
     print("="*40)
